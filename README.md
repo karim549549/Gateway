@@ -15,12 +15,12 @@ This project demonstrates the following rate-limiting algorithms:
 
 ## Comparison Table
 
-| Algorithm | Pros | Cons | Burst Handling | Memory Cost | Time Complexity |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Fixed Window** | Simple, low computation cost. | Can allow double the rate at window edges. | Poor | Low (single counter per user) | O(1) |
-| **Sliding Window** | Accurate rate limiting. | Memory-intensive, can be slow. | Good, but can be resource-intensive. | High (stores all timestamps) | O(N) |
-| **Token Bucket** | Handles bursts, memory-efficient. | Can be complex, allows "leaky" bursts. | Excellent, allows configurable bursts. | Low (stores tokens and last refill time) | O(1) |
-| **Leaky Bucket** | Smooths traffic, predictable. | No bursts allowed. | Poor (no bursts allowed) | Low (stores queue size and last leak time) | O(1) |
+| Algorithm          | Pros                              | Cons                                       | Burst Handling                         | Memory Cost                                | Time Complexity |
+| :----------------- | :-------------------------------- | :----------------------------------------- | :------------------------------------- | :----------------------------------------- | :-------------- |
+| **Fixed Window**   | Simple, low computation cost.     | Can allow double the rate at window edges. | Poor                                   | Low (single counter per user)              | O(1)            |
+| **Sliding Window** | Accurate rate limiting.           | Memory-intensive, can be slow.             | Good, but can be resource-intensive.   | High (stores all timestamps)               | O(N)            |
+| **Token Bucket**   | Handles bursts, memory-efficient. | Can be complex, allows "leaky" bursts.     | Excellent, allows configurable bursts. | Low (stores tokens and last refill time)   | O(1)            |
+| **Leaky Bucket**   | Smooths traffic, predictable.     | No bursts allowed.                         | Poor (no bursts allowed)               | Low (stores queue size and last leak time) | O(1)            |
 
 ---
 
@@ -32,13 +32,15 @@ This project demonstrates the following rate-limiting algorithms:
 The Fixed Window algorithm divides time into fixed-size intervals (windows) and assigns a counter to each window. Each incoming request increments the counter for the current window. If the counter exceeds a threshold, further requests are rejected until the next window starts, at which point the counter is reset.
 
 **Pros & Cons:**
-*   **Pros:** It is simple to implement and computationally cheap.
-*   **Cons:** A burst of traffic at the edge of a window can cause a flood of requests in the next window, exceeding the rate limit. For example, if the limit is 5 requests per minute, a user could make 5 requests at 0:59 and another 5 at 1:01, effectively making 10 requests in a 2-second interval.
+
+- **Pros:** It is simple to implement and computationally cheap.
+- **Cons:** A burst of traffic at the edge of a window can cause a flood of requests in the next window, exceeding the rate limit. For example, if the limit is 5 requests per minute, a user could make 5 requests at 0:59 and another 5 at 1:01, effectively making 10 requests in a 2-second interval.
 
 **Burst Handling:**
 This algorithm does not handle bursts well. It can allow twice the number of allowed requests in a short period.
 
 **Code:**
+
 ```typescript
 import { Request, Response, NextFunction } from "express";
 
@@ -94,13 +96,15 @@ The Sliding Window algorithm is a more accurate alternative to the Fixed Window 
 ![Sliding Window](material/sliding%20window.png)
 
 **Pros & Cons:**
-*   **Pros:** It provides a more accurate rate limit and avoids the edge-of-window problem of the Fixed Window algorithm.
-*   **Cons:** It can be memory-intensive as it needs to store a timestamp for each request for every user. The time complexity for each request is O(N) where N is the number of requests in the window, as we need to filter the timestamps.
+
+- **Pros:** It provides a more accurate rate limit and avoids the edge-of-window problem of the Fixed Window algorithm.
+- **Cons:** It can be memory-intensive as it needs to store a timestamp for each request for every user. The time complexity for each request is O(N) where N is the number of requests in the window, as we need to filter the timestamps.
 
 **Burst Handling:**
 The sliding window algorithm handles bursts better than the fixed window algorithm, but it still has its limitations. It can be memory-intensive and computationally expensive.
 
 **Code:**
+
 ```typescript
 import { Request, Response, NextFunction } from "express";
 
@@ -148,13 +152,15 @@ The Token Bucket algorithm uses a bucket with a fixed capacity that is filled wi
 ![Token Bucket](material/tokenbucket.png)
 
 **Pros & Cons:**
-*   **Pros:** It is memory-efficient as it only needs to store the number of tokens and the last refill time for each user. It is also computationally cheap, with a time complexity of O(1) for each request. Unlike the sliding window algorithm, which requires filtering timestamps, the token bucket algorithm only needs to perform a simple calculation.
-*   **Cons:** It can be more complex to implement than the Fixed and Sliding Window algorithms. It also allows for "leaky" bursts, where the number of requests can exceed the limit for a short period.
+
+- **Pros:** It is memory-efficient as it only needs to store the number of tokens and the last refill time for each user. It is also computationally cheap, with a time complexity of O(1) for each request. Unlike the sliding window algorithm, which requires filtering timestamps, the token bucket algorithm only needs to perform a simple calculation.
+- **Cons:** It can be more complex to implement than the Fixed and Sliding Window algorithms. It also allows for "leaky" bursts, where the number of requests can exceed the limit for a short period.
 
 **Burst Handling:**
 The Token Bucket algorithm is designed to handle bursts of traffic. It allows a burst of requests up to the bucket's capacity, and then it enforces a steady rate of requests.
 
 **Code:**
+
 ```typescript
 import { Request, Response, NextFunction } from "express";
 
@@ -208,13 +214,15 @@ export function tokenBucketRateLimiter(
 The Leaky Bucket algorithm is implemented with a queue of a fixed capacity. When a request arrives, it is added to the queue. If the queue is full, new requests are discarded. Requests are processed from the queue at a constant rate, which smooths out bursts of traffic into a steady stream.
 
 **Pros & Cons:**
-*   **Pros:** It provides a very smooth and predictable rate of requests. It is also memory-efficient.
-*   **Cons:** It does not allow for bursts of traffic. Even if the system has been idle for a long time, it will not allow a burst of requests.
+
+- **Pros:** It provides a very smooth and predictable rate of requests. It is also memory-efficient.
+- **Cons:** It does not allow for bursts of traffic. Even if the system has been idle for a long time, it will not allow a burst of requests.
 
 **Burst Handling:**
 The Leaky Bucket algorithm does not allow for bursts. It smooths out traffic into a constant stream, which can be useful for services that cannot handle sudden spikes in traffic.
 
 **Code:**
+
 ```typescript
 import { NextFunction, Request, Response } from "express";
 
@@ -250,7 +258,7 @@ export function leakyBucketRateLimiter(
   bucket.lastLeak = now;
 
   if (bucket.queue < BUCKET_CAPACITY) {
-    bucket.queue += 1; 
+    bucket.queue += 1;
     next();
   } else {
     res.status(429).json({ error: "Rate limit exceeded" });
@@ -258,15 +266,39 @@ export function leakyBucketRateLimiter(
 }
 ```
 
+Distributed / production considerations
+
+The examples are in-memory (a Map) — this will not work if your gateway runs on multiple instances behind a load balancer. For production, you generally move rate limiting state to a shared datastore:
+
+Options
+
+Redis — common choice. Use atomic Lua scripts or INCR with TTL for fixed windows, sorted sets for sliding log, and keys with timestamp/token values for token buckets.
+
+DynamoDB / Bigtable — for very large scale, use conditional updates.
+
+External services — API gateways like Kong, AWS API Gateway, or Cloudflare provide built-in distributed throttling.
+
+Example approach (Token Bucket in Redis):
+
+Store per-client token count & last refill timestamp in a Redis key (hash).
+
+Refill + consume must be atomic — implement with Redis Lua script to avoid races.
+
+Notes
+
+When using Redis, be careful with clock skew and jitter (use server time consistently).
+
+Provide fallbacks for Redis outages: fail-closed (block) or fail-open (allow) depending on your safety model.
+
 ---
 
 ## References
 
-*   [Rate Limiting Algorithms - GeeksforGeeks](https://www.geeksforgeeks.org/rate-limiting-algorithms/)
-*   [Design A Rate Limiter - ByteByteGo](https://bytebytego.com/courses/system-design-interview/design-a-rate-limiter)
-*   [Sliding Window Rate Limiting - Arpit Bhayani](https://arpitbhayani.me/tech/sliding-window-rate-limiter)
-*   [Understanding Sliding Window Algorithms for Effective Rate Limiting - APIPark](https://apipark.io/blog/sliding-window-rate-limiting/)
-*   [Token Bucket Algorithm - GeeksforGeeks](https://www.geeksforgeeks.org/token-bucket-algorithm/)
-*   [What Is Token Bucket Algorithm? - phoenixNAP](https://phoenixnap.com/kb/token-bucket-algorithm)
-*   [Leaky Bucket Algorithm - GeeksforGeeks](https://www.geeksforgeeks.org/leaky-bucket-algorithm/)
-*   [Leaky bucket - Wikipedia](https://en.wikipedia.org/wiki/Leaky_bucket)
+- [Rate Limiting Algorithms - GeeksforGeeks](https://www.geeksforgeeks.org/rate-limiting-algorithms/)
+- [Design A Rate Limiter - ByteByteGo](https://bytebytego.com/courses/system-design-interview/design-a-rate-limiter)
+- [Sliding Window Rate Limiting - Arpit Bhayani](https://arpitbhayani.me/tech/sliding-window-rate-limiter)
+- [Understanding Sliding Window Algorithms for Effective Rate Limiting - APIPark](https://apipark.io/blog/sliding-window-rate-limiting/)
+- [Token Bucket Algorithm - GeeksforGeeks](https://www.geeksforgeeks.org/token-bucket-algorithm/)
+- [What Is Token Bucket Algorithm? - phoenixNAP](https://phoenixnap.com/kb/token-bucket-algorithm)
+- [Leaky Bucket Algorithm - GeeksforGeeks](https://www.geeksforgeeks.org/leaky-bucket-algorithm/)
+- [Leaky bucket - Wikipedia](https://en.wikipedia.org/wiki/Leaky_bucket)
