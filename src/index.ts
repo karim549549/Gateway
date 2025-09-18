@@ -1,21 +1,25 @@
 import express from "express";
 import type { Request, Response } from "express";
 import { rateLimiter } from "./middleware/fixedWindow";
+import httpProxy from "http-proxy";
 const app = express();
 const PORT = 3000;
 
-const apiRouter = express.Router();
-
 app.use(rateLimiter);
-apiRouter.get("/service1", (req: Request, res: Response) => {
-  res.json({
-    status: `API is running successfully `,
-    service: "Service 1",
+
+const proxy = httpProxy.createProxyServer();
+const servers = [
+  "http://localhost:3001",
+  "http://localhost:3002",
+  "http://localhost:3003",
+];
+app.all("/service1", (req: Request, res: Response) => {
+  const target = servers[Math.floor(Math.random() * servers.length)];
+  proxy.web(req, res, { target }, (err: Error) => {
+    res.status(502).json({ error: "Bad Gateway", details: err.message });
   });
 });
 
-app.use("/api", apiRouter);
-
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Load balancer running on http://localhost:${PORT}`);
 });
