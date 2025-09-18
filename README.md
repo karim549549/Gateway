@@ -13,6 +13,28 @@ This project demonstrates the following rate-limiting algorithms:
 
 ---
 
+### Distributed / Production Considerations
+
+The examples are in-memory (a `Map`) — this will not work if your gateway runs on multiple instances behind a load balancer. For production, you generally move rate limiting state to a shared datastore.
+
+#### Options
+
+- **Redis** — A common choice. Use atomic Lua scripts or `INCR` with `TTL` for fixed windows, sorted sets for sliding logs, and keys with timestamp/token values for token buckets.
+- **DynamoDB / Bigtable** — For very large scale, use conditional updates.
+- **External services** — API gateways like Kong, AWS API Gateway, or Cloudflare provide built-in distributed throttling.
+
+#### Example Approach (Token Bucket in Redis)
+
+- Store per-client token count & last refill timestamp in a Redis key (hash).
+- Refill + consume must be atomic — implement with a Redis Lua script to avoid races.
+
+#### Notes
+
+- When using Redis, be careful with clock skew and jitter (use server time consistently).
+- Provide fallbacks for Redis outages: fail-closed (block) or fail-open (allow) depending on your safety model.
+
+---
+
 ## Comparison Table
 
 | Algorithm          | Pros                              | Cons                                       | Burst Handling                         | Memory Cost                                | Time Complexity |
@@ -265,30 +287,6 @@ export function leakyBucketRateLimiter(
   }
 }
 ```
-
-Distributed / production considerations
-
-The examples are in-memory (a Map) — this will not work if your gateway runs on multiple instances behind a load balancer. For production, you generally move rate limiting state to a shared datastore:
-
-Options
-
-Redis — common choice. Use atomic Lua scripts or INCR with TTL for fixed windows, sorted sets for sliding log, and keys with timestamp/token values for token buckets.
-
-DynamoDB / Bigtable — for very large scale, use conditional updates.
-
-External services — API gateways like Kong, AWS API Gateway, or Cloudflare provide built-in distributed throttling.
-
-Example approach (Token Bucket in Redis):
-
-Store per-client token count & last refill timestamp in a Redis key (hash).
-
-Refill + consume must be atomic — implement with Redis Lua script to avoid races.
-
-Notes
-
-When using Redis, be careful with clock skew and jitter (use server time consistently).
-
-Provide fallbacks for Redis outages: fail-closed (block) or fail-open (allow) depending on your safety model.
 
 ---
 
